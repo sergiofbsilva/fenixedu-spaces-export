@@ -7,6 +7,8 @@ import java.util.Set;
 import net.sourceforge.fenixedu.domain.GenericEvent;
 import net.sourceforge.fenixedu.domain.Person;
 import net.sourceforge.fenixedu.domain.PunctualRoomsOccupationRequest;
+import net.sourceforge.fenixedu.domain.accessControl.Group;
+import net.sourceforge.fenixedu.domain.accessControl.groups.BennuGroupBridge;
 import net.sourceforge.fenixedu.domain.resource.ResourceAllocation;
 import net.sourceforge.fenixedu.domain.space.AllocatableSpace;
 import net.sourceforge.fenixedu.domain.space.Blueprint;
@@ -160,41 +162,19 @@ public class SpaceMigrationTask extends CustomTask {
                 this.parentExternalId = suroundingSpace.getExternalId();
             }
 
-//            final Group genericEventOccupationsAccessGroup = space.getGenericEventOccupationsAccessGroup();
-//            this.occupationGroup =
-//                    genericEventOccupationsAccessGroup == null ? null : genericEventOccupationsAccessGroup.convert()
-//                            .getExternalId();
-//            final Group spaceManagementAccessGroup = space.getSpaceManagementAccessGroup();
-//            this.managementSpaceGroup =
-//                    spaceManagementAccessGroup == null ? null : spaceManagementAccessGroup.convert().getExternalId();
+            final BennuGroupBridge genericEventOccupationsAccessGroup =
+                    (BennuGroupBridge) space.getGenericEventOccupationsAccessGroup();
+            this.occupationGroup = getGroupExpression(genericEventOccupationsAccessGroup);
 
-//              To be used after translator
-//            final BennuGroupBridge genericEventOccupationsAccessGroup =
-//                    (BennuGroupBridge) space.getGenericEventOccupationsAccessGroup();
-//            this.occupationGroup = getGroupExpression(genericEventOccupationsAccessGroup);
-//
-//            final BennuGroupBridge spaceManagementAccessGroup = (BennuGroupBridge) space.getSpaceManagementAccessGroup();
-//            this.managementSpaceGroup = getGroupExpression(spaceManagementAccessGroup);
-//
-//            final BennuGroupBridge lessonOccupationsAccessGroup = (BennuGroupBridge) space.getLessonOccupationsAccessGroup();
-//            this.lessonOccupationsAccessGroup = getGroupExpression(lessonOccupationsAccessGroup);
-//
-//            final BennuGroupBridge writtenEvaluationOccupationsAccessGroup =
-//                    (BennuGroupBridge) space.getWrittenEvaluationOccupationsAccessGroup();
-//            this.writtenEvaluationOccupationsAccessGroup = getGroupExpression(writtenEvaluationOccupationsAccessGroup);
+            final BennuGroupBridge spaceManagementAccessGroup = (BennuGroupBridge) space.getSpaceManagementAccessGroup();
+            this.managementSpaceGroup = getGroupExpression(spaceManagementAccessGroup);
 
-//          To be used after translator
-//            final Group genericEventOccupationsAccessGroup = space.getGenericEventOccupationsAccessGroup();
-//            this.occupationGroup = getGroupExpression(genericEventOccupationsAccessGroup);
-//
-//            final Group spaceManagementAccessGroup = space.getSpaceManagementAccessGroup();
-//            this.managementSpaceGroup = getGroupExpression(spaceManagementAccessGroup);
-//
-//            final Group lessonOccupationsAccessGroup = space.getLessonOccupationsAccessGroup();
-//            this.lessonOccupationsAccessGroup = getGroupExpression(lessonOccupationsAccessGroup);
-//
-//            final Group writtenEvaluationOccupationsAccessGroup = space.getWrittenEvaluationOccupationsAccessGroup();
-//            this.writtenEvaluationOccupationsAccessGroup = getGroupExpression(writtenEvaluationOccupationsAccessGroup);
+            final BennuGroupBridge lessonOccupationsAccessGroup = (BennuGroupBridge) space.getLessonOccupationsAccessGroup();
+            this.lessonOccupationsAccessGroup = getGroupExpression(lessonOccupationsAccessGroup);
+
+            final BennuGroupBridge writtenEvaluationOccupationsAccessGroup =
+                    (BennuGroupBridge) space.getWrittenEvaluationOccupationsAccessGroup();
+            this.writtenEvaluationOccupationsAccessGroup = getGroupExpression(writtenEvaluationOccupationsAccessGroup);
 
             this.externalId = space.getExternalId();
             this.createdOn = dealWithDates(space.getCreatedOn());
@@ -211,9 +191,9 @@ public class SpaceMigrationTask extends CustomTask {
             }
         }
 
-//        public String getGroupExpression(final Group group) {
-//            return group == null ? null : group.toPersistentGroup().getExternalId();
-//        }
+        public String getGroupExpression(final Group group) {
+            return group == null ? null : group.getExpression();
+        }
     }
 
     private static class IntervalBean {
@@ -274,20 +254,6 @@ public class SpaceMigrationTask extends CustomTask {
 
     }
 
-    private Set<EventSpaceOccupationBean> getEventSpaceOccupations() {
-        taskLog("total occupations %d\n", Bennu.getInstance().getResourceAllocationsSet().size());
-        final Set<EventSpaceOccupationBean> eventSpaceOccupations = new HashSet<>();
-
-        for (ResourceAllocation resourceAllocation : Bennu.getInstance().getResourceAllocationsSet()) {
-            if (resourceAllocation.isWrittenEvaluationSpaceOccupation() || resourceAllocation.isLessonInstanceSpaceOccupation()
-                    || resourceAllocation.isLessonSpaceOccupation()) {
-                eventSpaceOccupations.add(new EventSpaceOccupationBean(resourceAllocation.getExternalId(), resourceAllocation
-                        .getResource().getExternalId()));
-            }
-        }
-        return eventSpaceOccupations;
-    }
-
     private Set<OccupationBean> getOccupations() {
         int i = 0;
         taskLog("total occupations %d\n", Bennu.getInstance().getResourceAllocationsSet().size());
@@ -338,10 +304,9 @@ public class SpaceMigrationTask extends CustomTask {
     @Override
     public void runTask() throws Exception {
         Gson gson = new GsonBuilder().setPrettyPrinting().serializeNulls().create();
-//        dumpSpaces(gson);
-//        dumpClassifications(gson);
+        dumpSpaces(gson);
+        dumpClassifications(gson);
         dumpOccupations(gson);
-//        dumpEventSpaceOccupations(gson);
     }
 
     private static class ClassificationBean {
@@ -384,12 +349,6 @@ public class SpaceMigrationTask extends CustomTask {
     public void dumpOccupations(Gson gson) {
         taskLog("Dumping occupations to json ...");
         output("occupations.json", gson.toJson(getOccupations()).getBytes());
-        taskLog("Done!");
-    }
-
-    public void dumpEventSpaceOccupations(Gson gson) {
-        taskLog("Dumping occupations to json ...");
-        output("event_space_occupations.json", gson.toJson(getEventSpaceOccupations()).getBytes());
         taskLog("Done!");
     }
 
