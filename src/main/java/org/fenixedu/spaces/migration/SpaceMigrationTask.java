@@ -9,7 +9,6 @@ import net.sourceforge.fenixedu.domain.Person;
 import net.sourceforge.fenixedu.domain.PunctualRoomsOccupationRequest;
 import net.sourceforge.fenixedu.domain.accessControl.Group;
 import net.sourceforge.fenixedu.domain.accessControl.groups.BennuGroupBridge;
-import net.sourceforge.fenixedu.domain.resource.ResourceAllocation;
 import net.sourceforge.fenixedu.domain.space.AllocatableSpace;
 import net.sourceforge.fenixedu.domain.space.Blueprint;
 import net.sourceforge.fenixedu.domain.space.BuildingInformation;
@@ -259,44 +258,40 @@ public class SpaceMigrationTask extends CustomTask {
         taskLog("total occupations %d\n", Bennu.getInstance().getResourceAllocationsSet().size());
         final Set<OccupationBean> eventsOccupations = new HashSet<>();
 
-        for (ResourceAllocation resourceAllocation : Bennu.getInstance().getResourceAllocationsSet()) {
-            if (resourceAllocation.isGenericEventSpaceOccupation()) {
-                GenericEventSpaceOccupation occupation = (GenericEventSpaceOccupation) resourceAllocation;
-                final GenericEvent genericEvent = occupation.getGenericEvent();
-                if (genericEvent != null) {
-                    String description = genericEvent.getDescription().getContent(Language.pt);
-                    String title = genericEvent.getTitle().getContent(Language.pt);
-                    String frequency = genericEvent.getFrequency() == null ? null : genericEvent.getFrequency().name();
-                    String beginDate = dealWithDates(genericEvent.getBeginDate());
-                    String endDate = dealWithDates(genericEvent.getEndDate());
-                    String beginTime = genericEvent.getStartTimeDateHourMinuteSecond().toString("HH:mm:ss");
-                    String endTime = genericEvent.getEndTimeDateHourMinuteSecond().toString("HH:mm:ss");
-                    Boolean saturday = genericEvent.getDailyFrequencyMarkSaturday();
-                    Boolean sunday = genericEvent.getDailyFrequencyMarkSunday();
-                    Set<String> spaces = new HashSet<>();
-                    Set<IntervalBean> intervals = new HashSet<>();
-                    for (AllocatableSpace space : genericEvent.getAssociatedRooms()) {
-                        spaces.add(space.getExternalId());
-                    }
-
-                    for (Interval interval : occupation
-                            .getEventSpaceOccupationIntervals((YearMonthDay) null, (YearMonthDay) null)) {
-                        final String start = interval.getStart().toString("dd/MM/yyyy HH:mm:ss");
-                        final String end = interval.getEnd().toString("dd/MM/yyyy HH:mm:ss");
-                        intervals.add(new IntervalBean(start, end));
-                    }
-
-                    Set<String> requests = new HashSet<>();
-                    PunctualRoomsOccupationRequest request = genericEvent.getPunctualRoomsOccupationRequest();
-
-                    eventsOccupations.add(new OccupationBean(description, title, frequency, beginDate, endDate, beginTime,
-                            endTime, saturday, sunday, spaces, intervals, request == null ? null : request.getExternalId()));
-                    if (i++ % 100 == 0) {
-                        taskLog("processing occupation %d\n", i);
-                    }
-
-                }
+        for (GenericEvent genericEvent : Bennu.getInstance().getGenericEventsSet()) {
+            String description = genericEvent.getDescription().getContent(Language.pt);
+            String title = genericEvent.getTitle().getContent(Language.pt);
+            String frequency = genericEvent.getFrequency() == null ? null : genericEvent.getFrequency().name();
+            String beginDate = dealWithDates(genericEvent.getBeginDate());
+            String endDate = dealWithDates(genericEvent.getEndDate());
+            String beginTime = genericEvent.getStartTimeDateHourMinuteSecond().toString("HH:mm:ss");
+            String endTime = genericEvent.getEndTimeDateHourMinuteSecond().toString("HH:mm:ss");
+            Boolean saturday = genericEvent.getDailyFrequencyMarkSaturday();
+            Boolean sunday = genericEvent.getDailyFrequencyMarkSunday();
+            Set<String> spaces = new HashSet<>();
+            Set<IntervalBean> intervals = new HashSet<>();
+            for (AllocatableSpace space : genericEvent.getAssociatedRooms()) {
+                spaces.add(space.getExternalId());
             }
+            for (GenericEventSpaceOccupation occupation : genericEvent.getGenericEventSpaceOccupationsSet()) {
+                for (Interval interval : occupation.getEventSpaceOccupationIntervals((YearMonthDay) null, (YearMonthDay) null)) {
+                    final String start = interval.getStart().toString("dd/MM/yyyy HH:mm:ss");
+                    final String end = interval.getEnd().toString("dd/MM/yyyy HH:mm:ss");
+                    intervals.add(new IntervalBean(start, end));
+                }
+                break;
+            }
+
+            Set<String> requests = new HashSet<>();
+            PunctualRoomsOccupationRequest request = genericEvent.getPunctualRoomsOccupationRequest();
+
+            eventsOccupations.add(new OccupationBean(description, title, frequency, beginDate, endDate, beginTime, endTime,
+                    saturday, sunday, spaces, intervals, request == null ? null : request.getExternalId()));
+
+            if (i++ % 100 == 0) {
+                taskLog("processing occupation %d\n", i);
+            }
+
         }
         return eventsOccupations;
     }
@@ -304,8 +299,8 @@ public class SpaceMigrationTask extends CustomTask {
     @Override
     public void runTask() throws Exception {
         Gson gson = new GsonBuilder().setPrettyPrinting().serializeNulls().create();
-        dumpSpaces(gson);
-        dumpClassifications(gson);
+//        dumpSpaces(gson);
+//        dumpClassifications(gson);
         dumpOccupations(gson);
     }
 
